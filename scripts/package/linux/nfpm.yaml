@@ -1,0 +1,20 @@
+name: prompt-faber-lab
+arch: amd64
+platform: linux
+version: ${PFL_VERSION}
+section: utils
+priority: optional
+maintainer: Prompt Faber <dev@promptfaber.local>
+description: Prompt Faber Lab CLI
+vendor: Prompt Faber
+license: MIT
+contents:
+  - src: ${PFL_BIN}
+    dst: /usr/local/bin/prompt-faber-lab
+overrides:
+  deb:
+    depends:
+      - ca-certificates
+  rpm:
+    depends:
+      - ca-certificates

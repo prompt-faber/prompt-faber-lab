@@ -1,0 +1,130 @@
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: promptlab
+      POSTGRES_PASSWORD: promptlab
+      POSTGRES_DB: promptlab
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  auth:
+    build:
+      context: .
+    environment:
+      PROMPTLAB_DATABASE_URL: postgresql+psycopg://promptlab:promptlab@postgres:5432/promptlab
+      PROMPTLAB_JWT_SECRET: change-me
+      PROMPTLAB_CORS_ORIGINS: "*"
+    depends_on:
+      - postgres
+    ports:
+      - "8000:8000"
+    command:
+      [
+        "sh",
+        "-c",
+        "alembic upgrade head && uvicorn promptlab.services.auth.app:app --host 0.0.0.0 --port 8000",
+      ]
+    logging:
+      driver: gelf
+      options:
+        gelf-address: "udp://logstash:12201"
+
+  core:
+    build:
+      context: .
+    environment:
+      PROMPTLAB_DATABASE_URL: postgresql+psycopg://promptlab:promptlab@postgres:5432/promptlab
+      PROMPTLAB_JWT_SECRET: change-me
+      PROMPTLAB_CORS_ORIGINS: "*"
+    depends_on:
+      - postgres
+      - auth
+    ports:
+      - "8001:8000"
+    command:
+      [
+        "sh",
+        "-c",
+        "alembic upgrade head && uvicorn promptlab.services.core.app:app --host 0.0.0.0 --port 8000",
+      ]
+    logging:
+      driver: gelf
+      options:
+        gelf-address: "udp://logstash:12201"
+
+  report:
+    build:
+      context: .
+      args:
+        PIP_EXTRAS: "reports"
+    environment:
+      PROMPTLAB_JWT_SECRET: change-me
+      PROMPTLAB_CORS_ORIGINS: "*"
+    depends_on:
+      - auth
+    ports:
+      - "8002:8000"
+    command: ["uvicorn", "promptlab.services.report.app:app", "--host", "0.0.0.0", "--port", "8000"]
+    logging:
+      driver: gelf
+      options:
+        gelf-address: "udp://logstash:12201"
+
+  dashboard:
+    build:
+      context: .
+      args:
+        PIP_EXTRAS: "dashboard"
+    environment:
+      PROMPTLAB_JWT_SECRET: change-me
+    depends_on:
+      - core
+    ports:
+      - "8501:8501"
+    command: ["streamlit", "run", "promptlab/dashboard.py", "--server.port=8501", "--server.address=0.0.0.0"]
+
+  prometheus:
+    image: prom/prometheus:v2.53.0
+    volumes:
+      - ./ops/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "9090:9090"
+
+  grafana:
+    image: grafana/grafana:11.1.0
+    depends_on:
+      - prometheus
+    ports:
+      - "3000:3000"
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.14.3
+    environment:
+      discovery.type: single-node
+      xpack.security.enabled: "false"
+    ports:
+      - "9200:9200"
+
+  logstash:
+    image: docker.elastic.co/logstash/logstash:8.14.3
+    depends_on:
+      - elasticsearch
+    volumes:
+      - ./ops/logstash.conf:/usr/share/logstash/pipeline/logstash.conf:ro
+    ports:
+      - "12201:12201/udp"
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.14.3
+    depends_on:
+      - elasticsearch
+    environment:
+      ELASTICSEARCH_HOSTS: "http://elasticsearch:9200"
+    ports:
+      - "5601:5601"
+
+volumes:
+  pgdata:

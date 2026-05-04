@@ -1,0 +1,63 @@
+name: packaging
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Build (EXE + Setup)
+        shell: pwsh
+        run: |
+          ./scripts/package/windows/build.ps1 -Version "${{ github.ref_name }}" -OutDir "./dist" -BuildMsi
+      - name: Smoke test
+        shell: pwsh
+        run: |
+          ./dist/PromptFaberLab-${{ github.ref_name }}-windows-x64.exe --help
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          path: dist/*
+
+  linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Build (.deb/.rpm/AppImage)
+        run: |
+          chmod +x ./scripts/package/linux/build.sh
+          ./scripts/package/linux/build.sh "${{ github.ref_name }}" "./dist"
+      - name: Smoke test
+        run: |
+          ./dist/prompt-faber-lab-${{ github.ref_name }}-linux-x64 --help
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux
+          path: dist/*
+
+  macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Build (.pkg/.dmg)
+        run: |
+          chmod +x ./scripts/package/macos/build.sh
+          ./scripts/package/macos/build.sh "${{ github.ref_name }}" "./dist"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos
+          path: dist/*

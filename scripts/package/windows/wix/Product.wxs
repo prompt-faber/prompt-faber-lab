@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+  <Product
+    Id="*"
+    Name="Prompt Faber Lab"
+    Language="1046"
+    Version="$(var.Version)"
+    Manufacturer="Prompt Faber"
+    UpgradeCode="D7E79CB0-3B1B-4A2B-B1E2-4C2A0C9C0F11"
+  >
+    <Package InstallerVersion="500" Compressed="yes" InstallScope="perMachine" InstallPrivileges="elevated" />
+
+    <MajorUpgrade DowngradeErrorMessage="Uma versão mais recente de Prompt Faber Lab já está instalada." />
+    <MediaTemplate />
+
+    <Feature Id="ProductFeature" Title="Prompt Faber Lab" Level="1">
+      <ComponentGroupRef Id="AppFiles" />
+      <ComponentGroupRef Id="Shortcuts" />
+    </Feature>
+
+    <Property Id="ARPCOMMENTS" Value="Laboratório central de testes e avaliação de prompts da Prompt Faber." />
+    <Property Id="ARPURLINFOABOUT" Value="https://github.com/prompt-faber" />
+    <Property Id="ARPHELPLINK" Value="https://github.com/prompt-faber" />
+    <Property Id="ARPNOMODIFY" Value="1" />
+    <Property Id="ARPNOREPAIR" Value="1" />
+
+    <Condition Message="Este instalador requer Windows 10 ou superior.">
+      <![CDATA[VersionNT >= 1000]]>
+    </Condition>
+    <Condition Message="Este instalador requer Windows 64-bit (x64/ARM64).">
+      <![CDATA[VersionNT64]]>
+    </Condition>
+    <Condition Message="Este instalador requer privilégios de administrador.">
+      <![CDATA[Privileged]]>
+    </Condition>
+
+    <Property Id="WIXUI_INSTALLDIR" Value="INSTALLFOLDER" />
+    <WixVariable Id="WixUILicenseRtf" Value="License.rtf" />
+    <UIRef Id="WixUI_InstallDir" />
+    <UIRef Id="WixUI_ErrorProgressText" />
+
+    <Directory Id="TARGETDIR" Name="SourceDir">
+      <Directory Id="ProgramFiles64Folder">
+        <Directory Id="INSTALLFOLDER" Name="PromptFaberLab" />
+      </Directory>
+      <Directory Id="ProgramMenuFolder">
+        <Directory Id="ProgramMenuDir" Name="Prompt Faber Lab" />
+      </Directory>
+    </Directory>
+
+    <DirectoryRef Id="INSTALLFOLDER">
+      <ComponentGroup Id="AppFiles" Directory="INSTALLFOLDER">
+        <Component Id="MainExecutable" Guid="E9C3EDC5-1FB9-4E0D-9E39-2D5B5AEB5B3E">
+          <File Id="PromptFaberLabExe" Source="$(var.SourceExe)" KeyPath="yes" Name="PromptFaberLab.exe" />
+        </Component>
+      </ComponentGroup>
+    </DirectoryRef>
+
+    <DirectoryRef Id="ProgramMenuDir">
+      <ComponentGroup Id="Shortcuts" Directory="ProgramMenuDir">
+        <Component Id="ProgramMenuShortcuts" Guid="A8D8F8A4-3E07-4B63-9F10-3E0AE9DD0BC2">
+          <Shortcut
+            Id="StartMenuShortcut"
+            Name="Prompt Faber Lab"
+            Description="Prompt Faber Lab"
+            Target="[INSTALLFOLDER]PromptFaberLab.exe"
+            WorkingDirectory="INSTALLFOLDER"
+          />
+          <Shortcut
+            Id="UninstallShortcut"
+            Name="Desinstalar Prompt Faber Lab"
+            Description="Remover Prompt Faber Lab"
+            Target="[SystemFolder]msiexec.exe"
+            Arguments="/x [ProductCode]"
+          />
+          <RemoveFolder Id="RemoveProgramMenuDir" Directory="ProgramMenuDir" On="uninstall" />
+          <RegistryValue Root="HKLM" Key="Software\Prompt Faber\Prompt Faber Lab" Name="InstallDir" Type="string" Value="[INSTALLFOLDER]" KeyPath="yes" />
+          <RegistryValue Root="HKLM" Key="Software\Prompt Faber\Prompt Faber Lab" Name="Version" Type="string" Value="$(var.Version)" />
+        </Component>
+      </ComponentGroup>
+    </DirectoryRef>
+  </Product>
+</Wix>
